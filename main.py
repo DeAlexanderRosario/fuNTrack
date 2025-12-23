@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import datetime
 from contextlib import asynccontextmanager
@@ -17,8 +18,9 @@ from telethon.tl.types import (
     UpdateUserStatus
 )
 
-# ---------------- WINDOWS FIX ----------------
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# ---------------- CROSS-PLATFORM ASYNCIO FIX ----------------
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # ---------------- ENV ----------------
 load_dotenv()
@@ -85,7 +87,6 @@ async def telegram_worker():
 
     # -------- INITIAL STATUS SYNC --------
     now = datetime.datetime.utcnow()
-
     if isinstance(user.status, UserStatusOnline):
         state["status"] = "ONLINE"
         online_since = now
@@ -141,6 +142,7 @@ async def lifespan(app: FastAPI):
     yield
     task.cancel()
 
+# ---------------- FASTAPI APP ----------------
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
