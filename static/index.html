@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUN Max - Optimized</title>
+
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600;900&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --p: #ff007a;
+            /* Cyber Pink */
+            --s: #00f2ff;
+            /* Electric Cyan */
+            --bg: #030305;
+            --glass: rgba(18, 18, 25, 0.90);
+            --border: rgba(255, 255, 255, 0.1);
+            --txt: #ffffff;
+            --dim: #71717a;
+            --err: #ff3333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            outline: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--txt);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- BACKGROUND ENGINE --- */
+        #neural-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* --- OS LAYOUT --- */
+        .os-shell {
+            position: relative;
+            z-index: 10;
+            width: 95vw;
+            height: 90vh;
+            display: grid;
+            grid-template-columns: 320px 1fr 280px;
+            grid-template-rows: 80px 1fr 180px;
+            gap: 15px;
+            transition: transform 0.1s linear;
+        }
+
+        .panel {
+            background: var(--glass);
+            backdrop-filter: blur(25px) saturate(150%);
+            -webkit-backdrop-filter: blur(25px) saturate(150%);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- TOP BAR --- */
+        header {
+            grid-column: 1 / 4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -1px;
+        }
+
+        .logo span {
+            color: var(--p);
+        }
+
+        /* --- LEFT PANEL: TELEGRAM MONITOR --- */
+        .sidebar-left {
+            grid-row: 2 / 4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .avatar-wrap {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 20px 0;
+            transition: 0.4s;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 40px;
+            background: #111;
+            border: 2px solid var(--border);
+            object-fit: cover;
+        }
+
+        .status-glow {
+            position: absolute;
+            inset: -5px;
+            border-radius: 45px;
+            border: 2px solid transparent;
+            opacity: 0;
+            transition: 0.5s;
+        }
+
+        .online .status-glow {
+            border-color: var(--s);
+            opacity: 1;
+            animation: glow-pulse 2s infinite;
+        }
+
+        @keyframes glow-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(0, 242, 255, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+        }
+
+        /* --- ARCADE AREA --- */
+        .arcade-main {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #game-viewport {
+            flex-grow: 1;
+            position: relative;
+            border-radius: 20px;
+            background: #000;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Changed from center */
+            padding-top: 10px;
+        }
+
+        .game-header-overlay {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-family: 'JetBrains Mono';
+            font-size: 16px;
+            color: var(--s);
+            margin-bottom: 5px;
+        }
+
+        #game-canvas {
+            background: #080808;
+            border: 1px solid #222;
+            box-shadow: 0 0 30px rgba(0,0,0,1);
+            cursor: none;
+            display: block;
+        }
+
+        /* CONTROL BAR BELOW CANVAS */
+        .game-controls-bar {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hint-text {
+            font-family: 'JetBrains Mono';
+            font-size: 12px;
+            color: #777;
+        }
+
+        .btn-exit {
+            padding: 8px 24px;
+            border-radius: 8px;
+            background: #222;
+            color: #fff;
+            border: 1px solid var(--border);
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Outfit', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .btn-exit:hover {
+            background: var(--p);
+            border-color: var(--p);
+            box-shadow: 0 0 15px var(--p);
+        }
+
+        .game-launcher {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .game-card {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            gap: 8px;
+        }
+
+        .game-card:hover {
+            background: var(--p);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(255, 0, 122, 0.3);
+            border-color: transparent;
+        }
+
+        .game-card i {
+            font-size: 28px;
+        }
+
+        /* --- RIGHT PANEL: VITALS --- */
+        .sidebar-right {
+            grid-row: 2 / 4;
+        }
+
+        .stat-box {
+            margin-bottom: 25px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--dim);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .progress-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--s);
+            box-shadow: 0 0 10px var(--s);
+            transition: 1s;
+        }
+
+        /* --- BOTTOM LOGS --- */
+        .logs {
+            grid-column: 2 / 3;
+            padding: 15px;
+            font-family: 'JetBrains Mono';
+            font-size: 12px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            opacity: 0.7;
+            border-left: 2px solid transparent;
+            padding-left: 5px;
+        }
+        .log-entry.log-online { border-color: var(--s); color: #fff; }
+        .log-entry.log-offline { border-color: var(--dim); color: var(--dim); }
+        .log-entry.log-sys { border-color: var(--p); }
+        .log-entry .time { color: var(--s); margin-right: 10px; }
+
+        /* Connection Status Indicator */
+        #ws-status {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="neural-canvas"></canvas>
+
+    <div class="os-shell" id="os">
+
+        <header class="panel">
+            <div class="logo"><span>FUN</span> TRACK</div>
+            <div style="text-align: right;">
+                <div id="digital-clock" style="font-family:'JetBrains Mono'; font-weight:700; font-size:20px;">00:00:00
+                </div>
+                <div id="ws-status">INITIALIZING...</div>
+            </div>
+        </header>
+
+        <!-- PROFILE MONITOR -->
+        <aside class="sidebar-left panel" id="profile-area">
+            <div class="avatar-wrap">
+                <div class="status-glow"></div>
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Nexus&backgroundColor=111" id="user-avatar"
+                    class="avatar-img">
+            </div>
+            <h1 id="user-name" style="font-size:24px; font-weight:900;">SCANNING...</h1>
+            <p id="last-seen" style="color:var(--dim); font-size:11px; margin-bottom:20px;">LAST SEEN: --</p>
+
+            <div style="width:100%; height:1px; background:var(--border); margin:20px 0;"></div>
+
+            <div style="text-align: left; width: 100%;">
+                <span class="stat-label">SESSION DURATION</span>
+                <p id="duration-val" style="font-family:'JetBrains Mono'; font-size: 20px; color: var(--s);">00:00:00
+                </p>
+            </div>
+        </aside>
+
+        <!-- MAIN ARCADE -->
+        <main class="arcade-main">
+            <!-- Game Canvas Modal -->
+            <div id="game-viewport">
+                <div class="game-header-overlay">
+                    <span id="game-name-txt">GAME_MODE</span>
+                    <span id="game-score">SCORE: 000</span>
+                </div>
+                
+                <canvas id="game-canvas" width="600" height="360"></canvas>
+                
+                <!-- Controls Moved Here -->
+                <div class="game-controls-bar">
+                    <div id="controls-hint" class="hint-text">CONTROLS: ARROWS TO MOVE</div>
+                    <button class="btn-exit" onclick="stopGame()">EXIT GAME</button>
+                </div>
+            </div>
+
+            <!-- Launcher -->
+            <div class="game-launcher" id="launcher">
+                <!-- Games Generated JS -->
+            </div>
+        </main>
+
+        <!-- SYSTEM VITALS -->
+        <aside class="sidebar-right panel">
+            <h3 style="font-size:14px; margin-bottom:25px; font-weight:900;">SYSTEM_VITALS</h3>
+
+            <div class="stat-box">
+                <span class="stat-label">CPU_CORE_LOAD</span>
+                <div class="progress-track">
+                    <div id="cpu-bar" class="progress-bar"></div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">MEMORY_ALLOCATION</span>
+                <div class="progress-track">
+                    <div id="ram-bar" class="progress-bar" style="background:var(--p);"></div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">UPLINK_STRENGTH</span>
+                <div class="progress-track">
+                    <div id="signal-bar" class="progress-bar" style="width:98%;"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- LOGS -->
+        <footer class="logs panel" id="log-feed">
+            <div class="log-entry log-sys"><span class="time">[SYS]</span> Nexus Engine Boot sequence initiated.</div>
+        </footer>
+
+    </div>
+
+    <script>
+        /* ============================================================
+           1. SOUND & UTILS
+        ============================================================ */
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(freq, type, vol, dur) {
+            if (audio.state === 'suspended') audio.resume();
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audio.currentTime);
+            gain.gain.setValueAtTime(vol, audio.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + dur);
+            osc.connect(gain); gain.connect(audio.destination);
+            osc.start(); osc.stop(audio.currentTime + dur);
+        }
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+        // Forgiving Collision Detection (Hitboxes slightly smaller than visuals)
+        function checkRect(r1, r2) {
+            const pad = 2; 
+            return (r1.x + pad < r2.x + r2.w - pad &&
+                    r1.x + r1.w - pad > r2.x + pad &&
+                    r1.y + pad < r2.y + r2.h - pad &&
+                    r1.y + r1.h - pad > r2.y + pad);
+        }
+
+        /* ============================================================
+           2. GAME ENGINE
+        ============================================================ */
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const W = 600, H = 360; // Reduced height slightly for better layout
+
+        // Input Handling
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].indexOf(e.key) > -1) {
+                e.preventDefault(); // Stop scrolling
+            }
+            keys[e.code] = true;
+        });
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        let activeGame = null;
+        let gameLoop = null;
+        let frames = 0;
+        let score = 0;
+        let gameOver = false;
+        let gameStarted = false; // Wait for user input to start
+
+        // Shared Game State Variables
+        let player = {};
+        let entities = [];
+        let particles = [];
+        
+        // Colors
+        const C_CYAN = '#00f2ff';
+        const C_PINK = '#ff007a';
+        const C_BG = '#080808';
+
+        const gameDB = [
+            { id: 'catch', name: 'VOID-CATCHER', icon: '📥', hint: 'ARROWS to move' },
+            { id: 'snake', name: 'NEON-SNAKE', icon: '🐍', hint: 'ARROWS to turn' },
+            { id: 'pong', name: 'CYBER-PONG', icon: '🎾', hint: 'ARROWS to deflect' },
+            { id: 'dodge', name: 'DODGE-RACE', icon: '🏎️', hint: 'L/R ARROWS to drive' },
+            { id: 'jump', name: 'AETHER-JUMP', icon: '🚀', hint: 'SPACE to jump' },
+            { id: 'flap', name: 'BIT-FLAP', icon: '🐦', hint: 'SPACE to fly' },
+            { id: 'space', name: 'STAR-BLASTER', icon: '🛰️', hint: 'ARROWS move, SPACE shoot' },
+            { id: 'rain', name: 'MATRIX-RUN', icon: '🌧️', hint: 'Avoid falling code' },
+            { id: 'grid', name: 'GRID-COLLECT', icon: '💠', hint: 'Collect dots' },
+            { id: 'click', name: 'AIM-TRAINER', icon: '🎯', hint: 'CLICK the targets' }
+        ];
+
+        function initArcade() {
+            const launcher = document.getElementById('launcher');
+            launcher.innerHTML = ''; // Clear prev
+            gameDB.forEach(g => {
+                const div = document.createElement('div');
+                div.className = 'game-card';
+                div.innerHTML = `<i>${g.icon}</i><span style="font-size:10px; font-weight:800;">${g.name}</span>`;
+                div.onclick = () => startGame(g);
+                launcher.appendChild(div);
+            });
+
+            canvas.onmousedown = (e) => {
+                if (activeGame === 'click' && gameStarted && !gameOver) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mx = e.clientX - rect.left;
+                    const my = e.clientY - rect.top;
+                    handleMouseClick(mx, my);
+                }
+            };
+        }
+
+        function startGame(gameObj) {
+            document.getElementById('launcher').style.display = 'none';
+            document.getElementById('game-viewport').style.display = 'flex';
+            document.getElementById('game-name-txt').innerText = gameObj.name;
+            document.getElementById('controls-hint').innerText = "CONTROLS: " + gameObj.hint;
+
+            activeGame = gameObj.id;
+            score = 0;
+            frames = 0;
+            gameOver = false;
+            gameStarted = false; // Pause at start
+            entities = [];
+            particles = [];
+
+            resetGameLogic(activeGame);
+            beep(440, 'square', 0.1, 0.2);
+            run();
+        }
+
+        function stopGame() {
+            cancelAnimationFrame(gameLoop);
+            document.getElementById('launcher').style.display = 'grid';
+            document.getElementById('game-viewport').style.display = 'none';
+            activeGame = null;
+        }
+
+        function run() {
+            if (!activeGame) return;
+
+            // Clear Screen
+            ctx.fillStyle = C_BG;
+            ctx.fillRect(0, 0, W, H);
+
+            if (!gameStarted) {
+                // START SCREEN
+                ctx.fillStyle = C_CYAN;
+                ctx.textAlign = "center";
+                ctx.font = "20px JetBrains Mono";
+                ctx.fillText("PRESS SPACE TO START", W / 2, H / 2);
+                
+                if (keys['Space'] || keys['ArrowUp'] || activeGame === 'click') {
+                    gameStarted = true;
+                    keys['Space'] = false; // prevent instant jump
+                }
+            } 
+            else if (gameOver) {
+                // GAME OVER SCREEN
+                ctx.fillStyle = C_PINK;
+                ctx.textAlign = "center";
+                ctx.font = "30px JetBrains Mono";
+                ctx.fillText("GAME OVER", W / 2, H / 2);
+                ctx.fillStyle = "#fff";
+                ctx.font = "14px JetBrains Mono";
+                ctx.fillText("FINAL SCORE: " + score, W / 2, H / 2 + 30);
+                ctx.fillText("Press SPACE to Restart", W / 2, H / 2 + 60);
+
+                if (keys['Space']) {
+                    score = 0; frames = 0; gameOver = false; entities = []; particles = [];
+                    resetGameLogic(activeGame);
+                }
+            } else {
+                frames++;
+                runGameLogic(activeGame);
+            }
+
+            document.getElementById('game-score').innerText = `SCORE: ${score.toString().padStart(3, '0')}`;
+            gameLoop = requestAnimationFrame(run);
+        }
+
+        /* --- LOGIC ROUTER --- */
+        function resetGameLogic(id) {
+            // General player reset to center-ish
+            player = { x: W/2 - 15, y: H - 50, w: 30, h: 30, s: 5, dx: 0, dy: 0, grounded: true };
+            
+            switch (id) {
+                case 'catch': player.w = 50; player.h = 10; player.s = 8; break;
+                case 'snake': player = { x: 10, y: 10, dx: 1, dy: 0, tail: [] }; entities = [{ x: 15, y: 15 }]; break;
+                case 'pong': player = { x: W/2 - 40, y: H - 30, w: 80, h: 10 }; entities = [{ x: W/2, y: H/2, vx: 4, vy: -4, r: 6 }]; break;
+                case 'dodge': player = { x: W/2 - 15, y: H - 80, w: 30, h: 50 }; break;
+                case 'jump': player = { x: 50, y: H - 60, w: 30, h: 30, vy: 0, grounded: true }; break;
+                case 'flap': player = { x: 50, y: H/2, w: 20, h: 20, vy: 0 }; break;
+                case 'space': player = { x: W/2 - 15, y: H - 50, w: 30, h: 30 }; break;
+                case 'rain': player = { x: W/2, y: H - 40, w: 20, h: 20 }; break;
+                case 'grid': player = { x: W/2, y: H/2, w: 15, h: 15 }; entities = [{ x: rand(20, W-20), y: rand(20, H-20), t: 'coin' }]; break;
+                case 'click': entities = [{ x: W/2, y: H/2, r: 20, life: 60 }]; break;
+            }
+        }
+
+        function runGameLogic(id) {
+            switch (id) {
+                case 'catch': logicCatch(); break;
+                case 'snake': logicSnake(); break;
+                case 'pong': logicPong(); break;
+                case 'dodge': logicDodge(); break;
+                case 'jump': logicJump(); break;
+                case 'flap': logicFlap(); break;
+                case 'space': logicSpace(); break;
+                case 'rain': logicRain(); break;
+                case 'grid': logicGrid(); break;
+                case 'click': logicClick(); break;
+            }
+        }
+
+        /* --- 1. CATCH --- */
+        function logicCatch() {
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= player.s;
+            if (keys['ArrowRight'] && player.x < W - player.w) player.x += player.s;
+
+            // Spawn Slower
+            if (frames % 40 === 0) entities.push({ x: Math.random() * (W - 20), y: -20, s: rand(3, 5) });
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            entities.forEach((e, i) => {
+                e.y += e.s;
+                ctx.fillStyle = C_PINK; ctx.fillRect(e.x, e.y, 15, 15);
+                if (checkRect({ x: e.x, y: e.y, w: 15, h: 15 }, player)) {
+                    score++; beep(880, 'sine', 0.1, 0.1); entities.splice(i, 1);
+                }
+                if (e.y > H) { gameOver = true; beep(100, 'sawtooth', 0.5, 0.5); }
+            });
+        }
+
+        /* --- 2. SNAKE --- */
+        function logicSnake() {
+            if (frames % 6 !== 0) return; // Speed control
+
+            // Input (Prevent 180 reverses)
+            if (keys['ArrowUp'] && player.dy !== 1) { player.dx = 0; player.dy = -1; }
+            if (keys['ArrowDown'] && player.dy !== -1) { player.dx = 0; player.dy = 1; }
+            if (keys['ArrowLeft'] && player.dx !== 1) { player.dx = -1; player.dy = 0; }
+            if (keys['ArrowRight'] && player.dx !== -1) { player.dx = 1; player.dy = 0; }
+
+            player.x += player.dx; player.y += player.dy;
+
+            const GRID_W = 30; // 600 / 20
+            const GRID_H = 18; // 360 / 20
+            const CELL = 20;
+
+            if (player.x < 0 || player.x >= GRID_W || player.y < 0 || player.y >= GRID_H) gameOver = true;
+
+            player.tail.push({ x: player.x, y: player.y });
+            while (player.tail.length > score + 3) player.tail.shift(); // Start length 3
+
+            ctx.fillStyle = C_CYAN;
+            player.tail.forEach(t => ctx.fillRect(t.x * CELL, t.y * CELL, CELL - 2, CELL - 2));
+
+            const food = entities[0];
+            ctx.fillStyle = C_PINK; ctx.fillRect(food.x * CELL, food.y * CELL, CELL - 2, CELL - 2);
+
+            if (player.x === food.x && player.y === food.y) {
+                score++; beep(600, 'sine', 0.1, 0.1);
+                food.x = Math.floor(rand(0, GRID_W)); food.y = Math.floor(rand(0, GRID_H));
+            }
+
+            for (let i = 0; i < player.tail.length - 1; i++) {
+                if (player.tail[i].x === player.x && player.tail[i].y === player.y) gameOver = true;
+            }
+        }
+
+        /* --- 3. PONG --- */
+        function logicPong() {
+            // Player Movement
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= 7;
+            if (keys['ArrowRight'] && player.x < W - player.w) player.x += 7;
+
+            let ball = entities[0];
+            ball.x += ball.vx; ball.y += ball.vy;
+
+            // Wall Collisions
+            if (ball.x < 0 || ball.x > W) ball.vx *= -1;
+            if (ball.y < 0) ball.vy *= -1;
+            if (ball.y > H + 20) gameOver = true; // Late fail for forgiveness
+
+            // Paddle Hit
+            if (ball.y > player.y - 10 && ball.x >= player.x - 5 && ball.x <= player.x + player.w + 5) {
+                ball.vy = -Math.abs(ball.vy * 1.05);
+                // English/Spin based on where it hit
+                let center = player.x + player.w / 2;
+                ball.vx += (ball.x - center) * 0.1;
+                score++; beep(400, 'square', 0.1, 0.1);
+            }
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+            ctx.beginPath(); ctx.fillStyle = C_PINK; ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+        }
+
+        /* --- 4. DODGE (RACING) --- */
+        function logicDodge() {
+            const laneL = 150; 
+            const laneR = 450;
+            
+            if (keys['ArrowLeft'] && player.x > laneL) player.x -= 6;
+            if (keys['ArrowRight'] && player.x < laneR) player.x += 6;
+
+            if (frames % 50 === 0) entities.push({ x: rand(laneL, laneR), y: -50, w: 40, h: 40, s: rand(3, 6) });
+
+            // Road
+            ctx.fillStyle = '#111'; ctx.fillRect(100, 0, 400, H);
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 4; ctx.setLineDash([20, 20]); 
+            ctx.beginPath(); ctx.moveTo(300, 0); ctx.lineTo(300, H); ctx.stroke(); ctx.setLineDash([]);
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            entities.forEach((e, i) => {
+                e.y += e.s;
+                ctx.fillStyle = C_PINK; ctx.fillRect(e.x, e.y, e.w, e.h);
+                if (checkRect(player, e)) gameOver = true;
+                if (e.y > H) { score++; entities.splice(i, 1); }
+            });
+        }
+
+        /* --- 5. JUMP (DINO) --- */
+        function logicJump() {
+            const floorY = H - 30;
+            if (keys['Space'] && player.grounded) { 
+                player.vy = -12; 
+                player.grounded = false; 
+                beep(300, 'sine', 0.1, 0.1); 
+            }
+            player.vy += 0.8; // Gravity
+            player.y += player.vy;
+
+            if (player.y > floorY - player.h) { 
+                player.y = floorY - player.h; 
+                player.vy = 0; 
+                player.grounded = true; 
+            }
+
+            // Obstacles
+            if (frames % 100 === 0) entities.push({ x: W, y: floorY - 20, w: 20, h: 20 });
+
+            // Floor
+            ctx.fillStyle = '#333'; ctx.fillRect(0, floorY, W, 2);
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            entities.forEach((e, i) => {
+                e.x -= 4; // Speed
+                ctx.fillStyle = C_PINK; ctx.fillRect(e.x, e.y, e.w, e.h);
+                if (checkRect(player, e)) gameOver = true;
+                if (e.x < -20) { score++; entities.splice(i, 1); }
+            });
+        }
+
+        /* --- 6. FLAP (BIRD) --- */
+        function logicFlap() {
+            player.vy += 0.5;
+            player.y += player.vy;
+
+            if (keys['Space']) { player.vy = -5; keys['Space'] = false; beep(200, 'sine', 0.05, 0.05); }
+
+            if (frames % 100 === 0) {
+                let gap = 120; // Bigger gap for playability
+                let topH = rand(50, 200);
+                entities.push({ x: W, y: 0, w: 40, h: topH, type: 'wall' });
+                entities.push({ x: W, y: topH + gap, w: 40, h: H - (topH + gap), type: 'wall' });
+            }
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            entities.forEach((e, i) => {
+                e.x -= 2; // Slower pipes
+                ctx.fillStyle = '#222'; ctx.fillRect(e.x, e.y, e.w, e.h);
+                // Hit check
+                if (player.x + player.w > e.x && player.x < e.x + e.w &&
+                    player.y + player.h > e.y && player.y < e.y + e.h) {
+                        gameOver = true;
+                }
+                
+                if (player.y > H || player.y < 0) gameOver = true;
+                
+                if (e.x < -40 && e.y === 0) score++;
+                if (e.x < -40) entities.splice(i, 1);
+            });
+        }
+
+        /* --- 7. SPACE SHOOTER --- */
+        function logicSpace() {
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= 4;
+            if (keys['ArrowRight'] && player.x < W - 30) player.x += 4;
+            if (keys['ArrowUp'] && player.y > 200) player.y -= 4;
+            if (keys['ArrowDown'] && player.y < H - 30) player.y += 4;
+
+            if (keys['Space'] && frames % 12 === 0) {
+                particles.push({ x: player.x + 12, y: player.y, vy: -8 });
+                beep(800, 'square', 0.05, 0.05);
+            }
+
+            if (frames % 50 === 0) entities.push({ x: rand(0, W - 30), y: -30, hp: 1 });
+
+            // Player
+            ctx.fillStyle = C_CYAN;
+            ctx.beginPath(); ctx.moveTo(player.x + 15, player.y); ctx.lineTo(player.x + 30, player.y + 30); ctx.lineTo(player.x, player.y + 30); ctx.fill();
+
+            // Bullets
+            particles.forEach((b, i) => {
+                b.y += b.vy;
+                ctx.fillStyle = '#fff'; ctx.fillRect(b.x, b.y, 4, 10);
+                if (b.y < 0) particles.splice(i, 1);
+            });
+
+            // Enemies
+            entities.forEach((e, ei) => {
+                e.y += 2;
+                ctx.fillStyle = C_PINK; ctx.fillRect(e.x, e.y, 30, 30);
+
+                particles.forEach((b, bi) => {
+                    if (checkRect({ x: b.x, y: b.y, w: 4, h: 10 }, { x: e.x, y: e.y, w: 30, h: 30 })) {
+                        score += 10; entities.splice(ei, 1); particles.splice(bi, 1);
+                    }
+                });
+
+                if (checkRect(player, { x: e.x, y: e.y, w: 30, h: 30 })) gameOver = true;
+                if (e.y > H) entities.splice(ei, 1); // Despawn
+            });
+        }
+
+        /* --- 8. RAIN (MATRIX) --- */
+        function logicRain() {
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= 4;
+            if (keys['ArrowRight'] && player.x < W - 20) player.x += 4;
+
+            if (frames % 8 === 0) entities.push({ x: rand(0, W), y: -20, s: rand(3, 6), char: String.fromCharCode(0x30A0 + Math.random() * 96) });
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            ctx.fillStyle = '#0f0';
+            ctx.font = '16px monospace';
+            entities.forEach((e, i) => {
+                e.y += e.s;
+                ctx.fillText(e.char, e.x, e.y);
+                // Hitbox smaller than letter
+                if (checkRect(player, { x: e.x, y: e.y - 12, w: 10, h: 10 })) gameOver = true;
+                if (e.y > H) { score++; entities.splice(i, 1); }
+            });
+        }
+
+        /* --- 9. GRID (COLLECT) --- */
+        function logicGrid() {
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= 3;
+            if (keys['ArrowRight'] && player.x < W) player.x += 3;
+            if (keys['ArrowUp'] && player.y > 0) player.y -= 3;
+            if (keys['ArrowDown'] && player.y < H) player.y += 3;
+
+            // Enemy Spawn slower
+            if (frames % 200 === 0) entities.push({ x: 0, y: rand(0, H), vx: rand(2, 4), vy: rand(-2, 2), t: 'enemy' });
+
+            let coin = entities.find(e => e.t === 'coin');
+            if (!coin) {
+                coin = { x: rand(20, W - 20), y: rand(20, H - 20), t: 'coin' };
+                entities.push(coin);
+            }
+
+            ctx.fillStyle = C_CYAN; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            entities.forEach((e, i) => {
+                if (e.t === 'enemy') {
+                    e.x += e.vx; e.y += e.vy;
+                    if (e.x < 0 || e.x > W) e.vx *= -1;
+                    if (e.y < 0 || e.y > H) e.vy *= -1;
+                    ctx.fillStyle = C_PINK; ctx.fillRect(e.x, e.y, 20, 20);
+                    if (checkRect(player, { x: e.x, y: e.y, w: 20, h: 20 })) gameOver = true;
+                } else {
+                    ctx.fillStyle = '#fff'; ctx.fillRect(e.x, e.y, 10, 10);
+                    if (checkRect(player, { x: e.x, y: e.y, w: 10, h: 10 })) {
+                        score += 5; entities.splice(i, 1); beep(600, 'sine', 0.1, 0.1);
+                    }
+                }
+            });
+        }
+
+        /* --- 10. CLICK (AIM) --- */
+        function logicClick() {
+            if (frames % 60 === 0) {
+                entities.push({ x: rand(30, W - 30), y: rand(30, H - 30), r: rand(15, 35), life: 120 });
+            }
+
+            entities.forEach((e, i) => {
+                e.life--;
+                ctx.fillStyle = `rgba(255, 0, 122, ${e.life / 120})`;
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.fill();
+                // Inner ring
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(e.x, e.y, e.r/2, 0, Math.PI * 2); ctx.fill();
+                
+                if (e.life <= 0) {
+                    gameOver = true;
+                }
+            });
+        }
+
+        function handleMouseClick(mx, my) {
+            let hit = false;
+            entities.forEach((e, i) => {
+                let dx = mx - e.x;
+                let dy = my - e.y;
+                if (dx * dx + dy * dy < e.r * e.r) {
+                    score++;
+                    entities.splice(i, 1);
+                    hit = true;
+                    beep(600, 'triangle', 0.1, 0.1);
+                }
+            });
+            if (!hit) score = Math.max(0, score - 1);
+        }
+
+
+        /* ============================================================
+           3. PRESENCE & WEBSOCKET SYSTEM
+        ============================================================ */
+
+        let socket;
+        let reconnectTimer;
+        let sessionTimer = null;
+        let sessionSeconds = 0;
+
+        function connectWS() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
+            const wsStatus = document.getElementById('ws-status');
+            wsStatus.innerText = "CONNECTING...";
+            wsStatus.style.color = "var(--dim)";
+
+            // Error handling for local file opening (no server)
+            try {
+                socket = new WebSocket(wsUrl);
+            } catch(e) {
+                wsStatus.innerText = "OFFLINE MODE";
+                return;
+            }
+
+            socket.onopen = () => {
+                console.log("NEXUS LINK ESTABLISHED");
+                wsStatus.innerText = "CONNECTED";
+                wsStatus.style.color = "var(--s)";
+                addLog("Secure uplink established with server.", "log-sys");
+                clearTimeout(reconnectTimer);
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updatePresence(data);
+                } catch (e) {
+                    console.error("Data parse error", e);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log("NEXUS LINK LOST");
+                wsStatus.innerText = "DISCONNECTED";
+                wsStatus.style.color = "var(--err)";
+                addLog("Connection lost. Retrying in 2s...", "log-sys");
+                handleOfflineVisuals("SERVER DISCONNECTED");
+                reconnectTimer = setTimeout(connectWS, 2000);
+            };
+        }
+
+        function updatePresence(data) {
+            const nameEl = document.getElementById('user-name');
+            const seenEl = document.getElementById('last-seen');
+            const profile = document.getElementById('profile-area');
+            const avatar = document.getElementById('user-avatar');
+
+            if (nameEl.innerText !== data.name.toUpperCase()) {
+                nameEl.innerText = data.name.toUpperCase();
+                avatar.src = "https://i.ibb.co/G45LQxQb/Chat-GPT-Image-Dec-23-2025-12-50-54-PM.png";
+            }
+            
+            // Format time
+             const utcTime = data.last_seen.replace(" ", "T") + "Z"; // make it ISO UTC
+             const istTime = new Date(utcTime).toLocaleString("en-IN", {
+                timeZone: "Asia/Kolkata",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+            });
+
+            seenEl.innerText = `LAST SEEN: ${istTime}`;
+
+            if (data.status === "ONLINE") {
+                if (!profile.classList.contains('online')) {
+                    profile.classList.add('online');
+                    beep(660, 'sine', 1, 2);
+                    addLog(`${data.name} is now ONLINE`, "log-online");
+                    startSessionTimer();
+                }
+            } else {
+                if (profile.classList.contains('online')) {
+                    profile.classList.remove('online');
+                    beep(220, 'sawtooth', 0.2, 0.4);
+                    addLog(`${data.name} went OFFLINE`, "log-offline");
+                    stopSessionTimer();
+                }
+            }
+        }
+
+        function handleOfflineVisuals(msg) {
+            const profile = document.getElementById('profile-area');
+            if (profile.classList.contains('online')) {
+                profile.classList.remove('online');
+                stopSessionTimer();
+            }
+        }
+
+        function startSessionTimer() {
+            if (sessionTimer) return;
+            sessionSeconds = 0;
+            updateTimerDisplay();
+            sessionTimer = setInterval(() => {
+                sessionSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopSessionTimer() {
+            if (sessionTimer) {
+                clearInterval(sessionTimer);
+                sessionTimer = null;
+            }
+            document.getElementById('duration-val').innerText = "00:00:00";
+        }
+
+        function updateTimerDisplay() {
+            const h = Math.floor(sessionSeconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((sessionSeconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (sessionSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('duration-val').innerText = `${h}:${m}:${s}`;
+        }
+
+        function addLog(msg, type = "log-sys") {
+            const feed = document.getElementById('log-feed');
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.innerHTML = `<span class="time">[${time}]</span> ${msg}`;
+            feed.prepend(div);
+            if (feed.children.length > 50) feed.lastChild.remove();
+        }
+
+        /* ============================================================
+           4. BACKGROUND & INIT
+        ============================================================ */
+        const bgCanvas = document.getElementById('neural-canvas');
+        const bctx = bgCanvas.getContext('2d');
+        let dots = [];
+
+        function initBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            for (let i = 0; i < 60; i++) dots.push({ x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height, vx: Math.random() - 0.5, vy: Math.random() - 0.5 });
+        }
+
+        function drawBg() {
+            bctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bctx.fillStyle = "rgba(0, 242, 255, 0.15)";
+            dots.forEach(d => {
+                d.x += d.vx; d.y += d.vy;
+                if (d.x < 0 || d.x > bgCanvas.width) d.vx *= -1;
+                if (d.y < 0 || d.y > bgCanvas.height) d.vy *= -1;
+                bctx.beginPath(); bctx.arc(d.x, d.y, 2, 0, Math.PI * 2); bctx.fill();
+            });
+            requestAnimationFrame(drawBg);
+        }
+        
+        // 3D Tilt Effect
+        document.onmousemove = (e) => {
+            const x = (window.innerWidth / 2 - e.pageX) / 60;
+            const y = (window.innerHeight / 2 - e.pageY) / 60;
+            document.getElementById('os').style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+        };
+
+        initArcade();
+        initBg();
+        drawBg();
+        connectWS();
+
+        setInterval(() => {
+            document.getElementById('digital-clock').innerText = new Date().toLocaleTimeString();
+            document.getElementById('cpu-bar').style.width = Math.floor(Math.random() * 40 + 10) + "%";
+            document.getElementById('ram-bar').style.width = Math.floor(Math.random() * 20 + 50) + "%";
+        }, 1000);
+
+    </script>
+</body>
+</html>
